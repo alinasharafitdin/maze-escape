@@ -1,83 +1,182 @@
 # Assignment 3. Maze Escape
 
-Student ID:
-Name:
-Group:
-Maze size (rows x columns):
-
-This file is the report. Fill it in as you go. How to start: `START_HERE.md`. The task: `docs/Assignment3.pdf`.
+Student ID: 252949
+Name: Alina Sharafitdin
+Group: SE2532
+Maze size: 72 cells. Rows and columns are specified in data/walls.txt.
 
 ## Program output
 
-The 13 lines your program prints on your data (`java -cp out Main`):
+```text
+Broken: 71
+Kept: 56
+Last broken wall: 114
+MST cost: 21903
+Heaviest broken wall: 798
+Path length: 17
+DFS visited: 54
+Dead ends: 24
+Zones: 10
+Largest zone: 11
+Is DAG: 0
+Flow stages: 7
+Fastest route cost: 19
+```
 
-    Broken:
-    Kept:
-    Last broken wall:
-    MST cost:
-    Heaviest broken wall:
-    Path length:
-    DFS visited:
-    Dead ends:
-    Zones:
-    Largest zone:
-    Is DAG:
-    Flow stages:
-    Fastest route cost:
+## Maze picture
 
-My maze:
+![My maze](output/maze.png)
 
-![maze](output/maze.png)
+Open output/maze.html in a browser to explore the maze.
 
 ## Questions
 
-Answer in your own words, two or three sentences each.
+### Mission 0. What do find and union do, and what makes them fast?
 
-Mission 0. What do find and union do, and what makes them fast in your code?
+find returns the root of the group containing a cell. union joins two
+different groups and returns true; if the cells are already in the same
+group, it returns false. Union by size keeps trees shallow, and path
+compression makes later searches faster by connecting cells directly
+to their root.
 
-Mission 1. Why is Broken always R*C - 1, and Kept always (R-1)*(C-1)?
+### Mission 1. Why is Broken always R*C - 1?
 
-Mission 2. My MST cost from Kruskal and from Prim, and why they are equal:
+Initially, there are R*C separate groups. Every successful union reduces
+the number of groups by one. Since the rectangular grid is connected,
+exactly R*C - 1 walls must be broken to obtain one group.
 
-Mission 3. Why is there exactly one path between two cells? How did you avoid a stack overflow on a huge maze?
+### Mission 1. Why is Kept always (R-1)*(C-1)?
 
-Mission 4. Why does the second pass of Kosaraju go on the reversed graph? Why do the slides have no cycle exactly when Zones equals the number of cells?
+The grid has R*(C-1) + C*(R-1) inner walls. Subtracting the R*C - 1
+broken walls gives (R-1)*(C-1) walls that remain standing.
 
-Mission 5. Why is it enough to go through the zones in the order of their numbers? What does this pass cost?
+### Mission 2. What are the MST costs from Kruskal and Prim?
+
+Both algorithms give a total cost of 21903. Kruskal considers walls
+from cheapest to most expensive and selects those joining different
+components. Prim grows one tree by choosing the cheapest edge leading
+to a new cell; both algorithms produce a minimum spanning tree by the
+cut property.
+
+### Mission 3. Why is there exactly one path?
+
+The maze is connected, and breaking walls never creates a cycle because
+union rejects cells already in the same component. Therefore, the open
+passages form a tree. A tree has exactly one simple path between any
+two cells.
+
+### Mission 3. How did I avoid stack overflow?
+
+DFS uses explicit arrays to store the current path and the next
+direction to try. It does not use recursive method calls, so a long
+path does not overflow the Java call stack. Neighbours are tried in
+the required order: up, right, down, left.
+
+### Mission 4. Why does the second pass use the reversed graph?
+
+The first pass records the finishing order of DFS on the original
+graph. The second pass processes vertices in reverse finishing order
+on the reversed graph. This prevents a search from entering another
+unassigned component, so each new search identifies one complete SCC.
+
+### Mission 4. Why is the graph a DAG exactly when Zones equals n?
+
+There are no self-loops in the input. Any directed cycle therefore
+contains at least two different cells, and these cells belong to the
+same SCC. Consequently, the graph has no directed cycles exactly when
+every SCC contains one cell, giving n zones.
+
+### Mission 5. Why is zone-number order sufficient?
+
+Kosaraju numbers the zones in topological order: edges between zones
+go from smaller numbers to larger numbers. Thus, all predecessors of
+a zone are processed before it. This allows one forward pass to
+compute the longest chain and the cheapest route.
+
+### Mission 5. What is the cost of this pass?
+
+Let s be the number of slides and z the number of zones. Grouping
+cross-zone slides, selecting the cheapest parallel edges and computing
+the routes together take O(s+z) time and O(s+z) extra space. No priority
+queue is used in this mission.
 
 ## AI use
 
-The syllabus requires you to say which AI tools you used and for what. Write the tool (ChatGPT, Copilot, other) and what you asked it: explain an idea, find an error, review code. Write "none" if you did not use any. If you took code or text from a book or a website, give the source here.
+I used ChatGPT to generate implementations of the assignment algorithms,
+suggest additional DSU tests, explain the code, interpret check results,
+draft README answers and guide the Git workflow. I copied the suggested
+code into the starter project and ran the provided checks and benchmark
+on my laptop. The ready classes and examples came from the course
+starter project.
 
-## Timing (Mission 7)
+## Timing
 
-Milliseconds, 5 runs each, from `java -cp out Bench`.
+Measured on my laptop using the supplied Bench class. Each algorithm
+was run five times for each maze size.
 
-| maze | Kruskal | Prim |
-|---|---|---|
-| 100 x 100 | | |
-| 300 x 300 | | |
-| 1000 x 1000 | | |
+| Maze | Kruskal average, ms | Prim average, ms |
+|---|---:|---:|
+| 100 x 100 | 23 | 14 |
+| 300 x 300 | 93 | 78 |
+| 1000 x 1000 | 1793 | 3096 |
 
-What do the numbers say about how the time grows? Two or three sentences.
+As the side length increases, the number of cells grows quadratically,
+and the number of walls grows proportionally to the number of cells.
+Both implementations have approximately O(n log n) time on these grids,
+so runtime grows faster than the number of cells alone. Prim was faster
+on the smaller mazes, while Kruskal was faster on the largest; JVM warmup,
+memory allocation and garbage collection also affect the measurements.
 
 ## Complexity
 
-n is the number of cells, m the number of walls (or slides). Fill in every algorithm you wrote.
+n = number of cells, m = number of walls, s = number of slides,
+z = number of zones. Space means auxiliary storage, excluding input.
 
-| algorithm | time | space | assumptions |
+| Algorithm | Time | Space | Assumptions |
 |---|---|---|---|
-| DSU find and union | | | |
-| Kruskal | | | |
-| Prim | | | |
-| DFS | | | |
-| Kosaraju | | | |
-| Route in the zone graph | | | |
+| DSU find and union | O(alpha(n)) amortized per operation | O(n) for the DSU, O(1) per call | Union by size and iterative path compression; initialization is O(n) |
+| Build maze in file order | O(n + m*alpha(n)) | O(n) | Includes DSU initialization and selected walls |
+| Kruskal | O(n + m log(m+1) + m*alpha(n)) | O(n+m) | Sorting wall indexes and using DSU |
+| Prim | O(n + m log(m+1)) | O(n+m) | Lazy priority queue containing wall indexes |
+| DFS escape | O(n) | O(n) | The open maze is a tree with n-1 edges and degree at most four |
+| Kosaraju | O(n+s) | O(n+s) | Forward and reverse adjacency lists and explicit stacks |
+| Route in the zone graph | O(s+z) | O(s+z) | Includes grouping slides, choosing minimum parallel costs and DAG processing |
 
-## Before you submit
+## Validation
 
-- data/walls.txt, data/slides.txt and output/maze.png are in the repository.
-- `java tools/Check.java` shows all examples right.
-- This README is filled in, the program output and the section AI use included.
-- The work is pushed to main (at least one commit per mission) and the repository is public.
-- The link is attached in Moodle.
+The supplied checker reports:
+
+```text
+tiny: all 13 lines are right
+small: all 13 lines are right
+dag: all 13 lines are right
+```
+
+All DisjointSetTest checks pass, including the additional large-chain,
+self-union and repeated-union checks.
+
+## Run
+
+Generate personal input:
+
+```text
+java tools/MakeVariant.java 252949 data
+```
+
+Compile and check:
+
+```text
+java tools/Check.java
+```
+
+Run on personal input after checking, to restore the personal maze picture:
+
+```text
+java -cp out Main
+```
+
+Run the benchmark:
+
+```text
+java -cp out Bench
+```
