@@ -105,7 +105,93 @@ public class Zones {
      * [1] the cost of the cheapest route from the zone of cell 0 to the zone of the last cell.
      */
     public static long[] routes(Input.Slides s, int[] zoneOf, int zoneCount) {
-        // TODO
-        return new long[]{0, 0};
+        // Count slides between different zones.
+        int[] degree = new int[zoneCount];
+
+        for (int i = 0; i < s.count(); i++) {
+            int from = zoneOf[s.from()[i]];
+            int to = zoneOf[s.to()[i]];
+
+            if (from != to) {
+                degree[from]++;
+            }
+        }
+
+        // Group cross-zone slides by their source zone.
+        int[][] outgoing = new int[zoneCount][];
+
+        for (int zone = 0; zone < zoneCount; zone++) {
+            outgoing[zone] = new int[degree[zone]];
+        }
+
+        int[] filled = new int[zoneCount];
+
+        for (int i = 0; i < s.count(); i++) {
+            int from = zoneOf[s.from()[i]];
+            int to = zoneOf[s.to()[i]];
+
+            if (from != to) {
+                outgoing[from][filled[from]++] = i;
+            }
+        }
+
+        long[] distance = new long[zoneCount];
+        java.util.Arrays.fill(distance, Long.MAX_VALUE);
+        distance[zoneOf[0]] = 0;
+
+        // A chain consisting of one zone has length 1.
+        int[] stages = new int[zoneCount];
+        java.util.Arrays.fill(stages, 1);
+
+        // Temporary arrays for choosing the cheapest edge X -> Y.
+        int[] stamp = new int[zoneCount];
+        int[] cheapest = new int[zoneCount];
+        int[] targets = new int[zoneCount];
+
+        java.util.Arrays.fill(stamp, -1);
+
+        long longest = 1;
+
+        // Zone numbers are already in topological order.
+        for (int from = 0; from < zoneCount; from++) {
+            int targetCount = 0;
+
+            for (int edge : outgoing[from]) {
+                int to = zoneOf[s.to()[edge]];
+
+                if (stamp[to] != from) {
+                    stamp[to] = from;
+                    cheapest[to] = s.time()[edge];
+                    targets[targetCount++] = to;
+                } else {
+                    cheapest[to] = Math.min(
+                            cheapest[to],
+                            s.time()[edge]
+                    );
+                }
+            }
+
+            for (int i = 0; i < targetCount; i++) {
+                int to = targets[i];
+
+                stages[to] = Math.max(
+                        stages[to],
+                        stages[from] + 1
+                );
+
+                if (distance[from] != Long.MAX_VALUE) {
+                    distance[to] = Math.min(
+                            distance[to],
+                            distance[from] + cheapest[to]
+                    );
+                }
+            }
+
+            longest = Math.max(longest, stages[from]);
+        }
+
+        int exitZone = zoneOf[s.n() - 1];
+
+        return new long[]{longest, distance[exitZone]};
     }
 }
