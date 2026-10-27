@@ -19,10 +19,85 @@ public class Zones {
      * Is DAG in Main is 1 when the number of zones equals the number of cells (no cycle), so you do not need a separate check.
      */
     public static int[] kosaraju(Input.Slides s) {
-        // TODO
-        return new int[s.n()];
-    }
+        int n = s.n();
 
+        int[][] from = Graphs.slidesFrom(s);
+        int[][] into = Graphs.slidesInto(s);
+
+        boolean[] seen = new boolean[n];
+
+        int[] stack = new int[n];
+        int[] nextEdge = new int[n];
+        int[] finish = new int[n];
+
+        int finished = 0;
+
+        // First pass: DFS on the original graph.
+        for (int start = 0; start < n; start++) {
+            if (seen[start]) {
+                continue;
+            }
+
+            int top = 0;
+            stack[0] = start;
+            nextEdge[0] = 0;
+            seen[start] = true;
+
+            while (top >= 0) {
+                int current = stack[top];
+
+                if (nextEdge[top] == from[current].length) {
+                    finish[finished++] = current;
+                    top--;
+                } else {
+                    int edge = from[current][nextEdge[top]++];
+                    int next = s.to()[edge];
+
+                    if (!seen[next]) {
+                        seen[next] = true;
+                        top++;
+                        stack[top] = next;
+                        nextEdge[top] = 0;
+                    }
+                }
+            }
+        }
+
+        int[] zoneOf = new int[n];
+        java.util.Arrays.fill(zoneOf, -1);
+
+        int zone = 0;
+
+        // Second pass: reversed graph, reverse finishing order.
+        for (int i = finished - 1; i >= 0; i--) {
+            int start = finish[i];
+
+            if (zoneOf[start] != -1) {
+                continue;
+            }
+
+            int stackSize = 0;
+            stack[stackSize++] = start;
+            zoneOf[start] = zone;
+
+            while (stackSize > 0) {
+                int current = stack[--stackSize];
+
+                for (int edge : into[current]) {
+                    int next = s.from()[edge];
+
+                    if (zoneOf[next] == -1) {
+                        zoneOf[next] = zone;
+                        stack[stackSize++] = next;
+                    }
+                }
+            }
+
+            zone++;
+        }
+
+        return zoneOf;
+    }
     /**
      * Mission 5. The graph of zones: the edge X to Y costs the cheapest slide from X to Y, walking inside a zone is free.
      * Go through the zones in the order of their numbers (no priority queue). Returns two numbers:
